@@ -46,6 +46,9 @@ def find_orf(email, df_in, soi):
     df_sub = df_in[df_in['query_name'].isin(soi)] # limit dataframe to just sRNAs of interest
     df_sub.sort_values(by=['target_name', 'start'], inplace=True) # sort by coords
 
+    with open(soi, 'rb') as infile:
+        soi = pickle.load(infile)
+
     for acc in df_sub['target_name'].unique():
 
         print("fetching genbank", acc)
