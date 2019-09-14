@@ -107,5 +107,5 @@ if __name__ == '__main__':
     if len(sys.argv) == 4:
          find_orf(sys.argv[1], sys.argv[2], sys.argv[3])
     else:
-         print("Usage: find_orfs.py email@domain.com path_to_df.p ['isrK', 'OxyS_ST_rf_v3']")
+         print("Usage: find_orfs.py email@domain.com path_to_df.p sRNAs_of_interest.p")
          sys.exit(0)
