@@ -2,6 +2,7 @@ from Bio import SeqIO
 from Bio import Entrez
 import pandas as pd
 import pickle
+import sys
 
 def overlap(start1, end1, start2, end2):
     """
@@ -34,7 +35,7 @@ def binarySearch (arr, l, r, x):
         return -1
 
 # aoi is a pickled list of accessions of interest
-def find_orf(df_in, soi):
+def find_orf(email, df_in, soi):
     
     ct = 0
     rd = dict()
@@ -49,7 +50,7 @@ def find_orf(df_in, soi):
 
         print("fetching genbank", acc)
 
-        Entrez.email = 'hdutcher@pdx.edu'
+        Entrez.email = email
         foi = Entrez.efetch(db='nucleotide', id=acc, \
             rettype='gbwithparts', retmode='text')
         
@@ -82,6 +83,7 @@ def find_orf(df_in, soi):
                     'qend': tup[1], \
                         'qstrand': qs, \
                     'target_genome': acc, \
+                        'genome_desc': gb.description, \
                         'CDS_start': feat_array[result].location.start, \
                         'CDS_end': feat_array[result].location.end, \
                         'CDS_strand': feat_array[result].location.strand, \
@@ -91,15 +93,16 @@ def find_orf(df_in, soi):
                 print(acc)
                 print(feat_array[result])
                 ct += 1
-                    
+                
     with open('mother_gene_isrK_OxyS_results.p', 'wb') as outfile:
         pickle.dump(rd, outfile)
 
     resdf = pd.DataFrame.from_dict(rd, orient='index')
     resdf.to_csv('mother_gene_isrK_OxyS_results.csv')
 
-
-
-
-
-
+if __name__ == '__main__':
+    if len(sys.argv) == 4:
+         find_orf(sys.argv[1], sys.argv[2], sys.argv[3])
+    else:
+         print("Usage: find_orfs.py email@domain.com path_to_df.p ['isrK', 'OxyS_ST_rf_v3']")
+         sys.exit(0)
