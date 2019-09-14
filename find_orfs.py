@@ -34,69 +34,69 @@ def binarySearch (arr, l, r, x):
         return -1
 
 # aoi is a pickled list of accessions of interest
-def find_orf(df_in, aoi, path_to_gbs):
+def find_orf(df_in, soi):
     
     ct = 0
     rd = dict()
 
-    aoi = pickle.load(open(aoi, "rb"))
-
     print("reading infile")
     df_in = pd.read_pickle(df_in)
-    df_sub = df_in[df_in['target_name'].isin(aoi)] # limit dataframe to just files with genbanks locally available
 
-    # sort the dataframe by sRNA start/end position
+    df_sub = df_in[df_in['query_name'].isin(soi)] # limit dataframe to just sRNAs of interest
+    df_sub.sort_values(by=['target_name', 'start'], inplace=True) # sort by coords
 
-    for acc in aoi:
+    for acc in df_sub['target_name'].unique():
 
-        print("indexing", acc)
-        tree_path =  path_to_gbs + acc + '.gb'
+        print("fetching genbank", acc)
+
+        Entrez.email = 'hdutcher@pdx.edu'
+        foi = Entrez.efetch(db='nucleotide', id=acc, \
+            rettype='gbwithparts', retmode='text')
         
-        with open(tree_path, "r") as gb_in:
+        # read all the genbank features into a sorted list
+        print("parsing genbank...")
+            
+        feat_array = []
+        tup_array = []
         
-            # read all the genbank features into a sorted list
-            
-            feat_array = []
-            tup_array = []
-            
-            gb = SeqIO.read(gb_in, 'genbank')
-            
-            for feat in gb.features:
-                if feat.type == 'CDS':
-                    feat_array.append(feat)
-                    tup_array.append((feat.location.start, feat.location.end))
-            
-            a = df_sub[df_sub['target_name'] == acc].sort_values(by='start')
+        gb = SeqIO.read(foi, 'genbank')
+        
+        for feat in gb.features:
+            if feat.type == 'CDS':
+                feat_array.append(feat)
+                tup_array.append((feat.location.start, feat.location.end))
+        
+        a = df_sub[df_sub['target_name'] == acc].sort_values(by='start')
 
-            qtup = list(zip(a['start'].astype('int32'), a['end'].astype('int32')))
+        qtup = list(zip(a['start'].astype('int32'), a['end'].astype('int32')))
 
-            nsp = 0
-            for tup in qtup:
-                
-                result = binarySearch(tup_array, nsp, len(tup_array)-1, tup)
-                if result != -1:
-                    qn = a['query_name'].where(a['start'] == tup[0]).dropna().values[0]
-                    qs = a['strand'].where(a['start'] == tup[0]).dropna().values[0]
-                    rd[ct] = {'query_name': qn, \
-                        'qstart': tup[0], \
-                        'qend': tup[1], \
-                            'qstrand': qs, \
-                        'target_genome': acc, \
-                            'CDS_start': feat_array[result].location.start, \
-                            'CDS_end': feat_array[result].location.end, \
-                            'CDS_strand': feat_array[result].location.strand, \
-                            'CDS_product': feat_array[result].qualifiers['product'][0]}
-                    nsp = result
-                    print(qn)
-                    print(acc)
-                    print(feat_array[result])
-                    ct += 1
+        nsp = 0
+        for tup in qtup:
+            
+            result = binarySearch(tup_array, nsp, len(tup_array)-1, tup)
+            if result != -1:
+                qn = a['query_name'].where(a['start'] == tup[0]).dropna().values[0]
+                qs = a['strand'].where(a['start'] == tup[0]).dropna().values[0]
+                rd[ct] = {'query_name': qn, \
+                    'qstart': tup[0], \
+                    'qend': tup[1], \
+                        'qstrand': qs, \
+                    'target_genome': acc, \
+                        'CDS_start': feat_array[result].location.start, \
+                        'CDS_end': feat_array[result].location.end, \
+                        'CDS_strand': feat_array[result].location.strand, \
+                        'CDS_product': feat_array[result].qualifiers['product'][0]}
+                nsp = result
+                print(qn)
+                print(acc)
+                print(feat_array[result])
+                ct += 1
                     
-    with open('mother_gene_90_results.p', 'wb') as outfile:
+    with open('mother_gene_isrK_OxyS_results.p', 'wb') as outfile:
         pickle.dump(rd, outfile)
 
     resdf = pd.DataFrame.from_dict(rd, orient='index')
-    resdf.to_csv('mother_gene_90_results.csv')
+    resdf.to_csv('mother_gene_isrK_OxyS_results.csv')
 
 
 
